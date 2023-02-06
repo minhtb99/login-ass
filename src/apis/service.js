@@ -1,10 +1,10 @@
 import axios from "axios";
 
-axios.defaults.baseURL = "http://localhost:8000";
+axios.defaults.baseURL = "http://localhost:8888";
 
-export async function getUsers() {
+export async function authen(user) {
   try {
-    const response = await axios.get("/users");
+    const response = await axios.post("/login", user);
     return response.data;
   } catch (error) {
     console.error(error);

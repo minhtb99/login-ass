@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { getUsers } from "../../apis/service"
+import { useCallback, useMemo, useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { authen } from "../../apis/service"
 import Button from "../../component/button/button"
 import Checkbox from "../../component/checkbox/checkbox"
 import HrefLink from "../../component/hrefLink/hreftLink"
 import InputField from "../../component/inputField/inputField"
+import Loading from "../../component/loading/loading"
 import MgsValid from "../../component/mgsValid/mgsValid"
 import { validInput } from "../../helper/validInput"
 import { Heading, InputForm, LoginContainer, LoginContent, MgsError, MgsLoginErr, RememberAccountWrapper, SignUpContent } from "./loginStyle"
@@ -15,13 +17,14 @@ const CONSTANT = {
     }
 }
 
-
 const Login = () => {
     const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
     const [showPass, setShowPass] = useState(false)
     const [isRememberPass, setIsRememberPass] = useState(false)
-    const [usersData, setUsersData] = useState([])
+    const [isLoading, setIsLoading] = useState(false)
+    const navigate = useNavigate();
+
     const [mgsError, setMgsError] = useState({
         username: '',
         password: ''
@@ -101,25 +104,22 @@ const Login = () => {
         return true
     }, [mgsError])
 
-    const submit = useCallback(() => {
-        console.log(username, password, isRememberPass);
-        const isAccountFound = usersData?.find(user => username === user.email)
-        if (isAccountFound) {
-            console.log(isAccountFound);
-            setMgsAccountNotMatch("")
-        } else {
-            setMgsAccountNotMatch("Account information incorrect")
+    const submit = useCallback(async () => {
+        const user = { username, password }
+        setIsLoading(true)
+        const res = await authen(user)
+        if (res !== undefined) {
+            setIsLoading(false)
+            if (res?.accessToken) {
+                localStorage.setItem("token", res?.accessToken)
+                localStorage.setItem("name", res?.name)
+                setMgsAccountNotMatch("");
+                navigate("/home")
+            } else {
+                setMgsAccountNotMatch("Account information incorrect")
+            }
         }
-
-    }, [username, password, isRememberPass, usersData])
-
-    useEffect(() => {
-        async function fetchData() {
-            const users = await getUsers()
-            setUsersData(users)
-        }
-        fetchData()
-    }, [])
+    }, [username, password, navigate])
 
 
     return (
@@ -171,11 +171,13 @@ const Login = () => {
                     <MgsLoginErr>
                         <MgsValid text={mgsAccountNotMatch} />
                     </MgsLoginErr>}
-                <Button
-                    title="LOGIN"
-                    onClick={submit}
-                    disabled={isDisableLogin}
-                />
+                {isLoading ? (<Loading text={"PROCESSING..."} />) : (
+                    <Button
+                        title="LOGIN"
+                        onClick={submit}
+                        disabled={isDisableLogin}
+                    />
+                )}
             </LoginContent>
         </LoginContainer>
     )
